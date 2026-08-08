@@ -1,0 +1,68 @@
+==== Chat Handoff Summary Start ==== Session: Docwright build — generic fork of DocForce, sanitization + quarantine incident Date: 2026-08-04 What Docwright is: a generic, engagement-agnostic fork of DocForce, created so R&D work (starting with the ELK-based intelligent-routing plan) doesn't touch
+
+pasted
+
+
+Examined pull request reference and context
+Examined pull request reference and context
+That's the critical piece — let me pull it directly since you've now given me the URL.
+
+
+Reconciled prior analysis with merged codebase implementation details
+Reconciled prior analysis with merged codebase implementation details
+This is a major find, and it substantially reframes what we're sitting on — in a good way, but it needs real reconciling before the draft goes anywhere.
+
+The core mechanism we found was already independently discovered and partially fixed — by mwith, the same person who commented on #1237. From mwith's very first comment on this PR:
+
+"if a bend point is located on the edge of the element then the drawing algorithm will render the connection from the center of the element to the attachment point... So in order not to make changes to the drawing algorithm then the attachment points will be adjusted so the start and end points is offset by 1."
+
+That's the identical bug, described independently, in May. And notice the phrasing: mwith explicitly chose not to fix the underlying algorithm — just to route around it by nudging generated bendpoints a safe distance away. That's a scope decision, stated plainly, not an oversight.
+
+This means the code I read from master several turns ago and proposed to "fix" was very likely mwith's already-negotiated, already-tested solution — not untouched original code. The midpoint-bendpoint logic I found and initially critiqued as imprecise is the outcome of real back-and-forth with Phillipus, converging on "one bendpoint at 50% between the two attachments" specifically because more precise placements caused a different, zoom-dependent instability that Phillipus found through actual testing:
+
+"adding bend-points very close to the ends of a connection can lead to problems which become apparent when zooming in and out."
+
+That's real, hands-on-verified fragility I had no way to know about, and it directly explains why the "obviously more precise" two-bendpoint fix I drafted might not hold up in practice the way it looks like it should on paper.
+
+But here's why our finding isn't redundant — it's scoped differently, and mwith's own words confirm the gap: their fix only touches the XML import path — it makes newly-generated bendpoints avoid the trap when reading an Exchange Format file. It does nothing about the underlying anchor calculation itself, which mwith explicitly left alone. What Steve reproduced was live interactive editing — dragging a bendpoint by hand, then moving a shape — a completely different trigger path that never goes near the import code at all. The center-collapse mechanism is still live and reachable; it's just been fenced off on one specific entry point, not fixed at the source.
+
+My recommendation, given all this:
+
+Don't touch or second-guess the import-side fix. It's real, tested, pragmatic engineering with a documented reason for its specific tradeoffs. Not our place to relitigate it.
+Reframe our issue around the untouched path — manual bendpoint placement and shape move/resize, which #1242 doesn't address at all. That's genuinely additive, not competing.
+Cite mwith's "in order not to make changes to the drawing algorithm" line directly — it's the clearest possible acknowledgment from inside the project that the deeper fix was deliberately deferred, which is exactly the gap our finding sits in.
+Soften the "proposed fix" section considerably. Presenting a clean ray-cast replacement as if it's an obvious correct-the-algorithm fix now reads naively, given Phillipus found real zoom-related instability testing adjacent to this exact spot. I'd reframe it as "here's the standard algorithm as precedent for why center-collapse isn't required, offered with the caveat that a maintainer already found related rendering fragility nearby — this likely needs real GEF-level testing before landing."
+Want me to rewrite the draft along those lines?
+
+yes
+
+
+Deliberated technical scope, precedent alignment, and component attribution
+Deliberated technical scope, precedent alignment, and component attribution
+Let me view the full current state to check the flow reads cleanly end to end before presenting it:
+
+
+Reconsidered claim specificity and acknowledged inferential uncertainty
+Reconsidered claim specificity and acknowledged inferential uncertainty
+One small redundancy to clean up — the closing offer to share files is now duplicated with test case 4's closing sentence:
+
+
+Edited a file, read a file
+Edited a file, read a file
+Rewritten and updated. Summary of what changed:
+
+New "Relationship to #1237 and #1242" section right up front — credits mwith's prior work explicitly, quotes their own words showing the underlying algorithm was knowingly left untouched, and states plainly that this issue targets what that fix didn't cover
+"Why this matters" updated to acknowledge the import path is now handled, narrowing the remaining concern to live editing
+Precedent section now corrects itself on OrthogonalAnchor vs ChopboxAnchor, and folds in Phillipus's own zoom-instability finding as a reason to treat any fix cautiously
+"Proposed fix" retitled and reframed as a starting point, not a ready patch — explicit about needing real GEF-level testing before anyone trusts it, given what Phillipus already found nearby
+Everything that's still ours and still solid stayed put — the repro steps, the real coordinate evidence, all four test cases. This is now a report that shows it did its homework rather than one that risks stepping on real, careful work three other people already did in public. Ready whenever you want to post it — as its own issue, or as a comment directly on #1237 now that it explicitly engages with that thread's own discussion.
+
+
+Archi issue draft
+Document · MD 
+
+
+
+
+
+

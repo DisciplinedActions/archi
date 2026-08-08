@@ -11,7 +11,8 @@ import org.junit.platform.suite.api.SuiteDisplayName;
 
 @Suite
 @SelectClasses({
-    ArchimateDiagramEditPartFactoryTests.class
+    ArchimateDiagramEditPartFactoryTests.class,
+    OrthogonalAnchorTests.class
 })
 @SuiteDisplayName("All EditParts Tests")
 public class AllEditPartsTests {
