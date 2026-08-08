@@ -301,8 +301,62 @@ public class OrthogonalAnchor extends ChopboxAnchor {
 					(int) (COSPI4 * (corner.height / 2.0))
 					));
 		default:
-			return figureBBox.getCenter();
+			return getBoundaryIntersection(figureBBox, reference);
 		}
+	}
+
+	/**
+	 * Computes the point where a ray from the box's center through
+	 * <i>reference</i> exits the box. This is the same calculation
+	 * {@link org.eclipse.draw2d.ChopboxAnchor} documents as its own
+	 * intended behaviour: well-defined for any reference point except
+	 * one that coincides exactly with the box's center, in which case
+	 * there is no direction to project and the center is returned as-is.
+	 * <p>
+	 * Used as the fallback for any position classification not given an
+	 * explicit case above -- MIDDLE|CENTER for plain rectangles, and the
+	 * *_CORNER-interior combinations for rounded rectangles/ellipses --
+	 * so that a reference point inside the figure's bounds (e.g. a
+	 * bendpoint dragged into the shape, or a shape moved onto a
+	 * previously-valid bendpoint) still anchors at a real boundary
+	 * crossing instead of silently collapsing to the figure's center.
+	 *
+	 * @param box
+	 *            The figure's bounding box
+	 * @param reference
+	 *            The reference point
+	 * @return The point on the box's boundary in line with the reference
+	 *         point, or the box's center if the reference point coincides
+	 *         with it exactly
+	 */
+	private Point getBoundaryIntersection(Rectangle box, Point reference) {
+		double cx = box.x + box.width / 2.0;
+		double cy = box.y + box.height / 2.0;
+		double hw = box.width / 2.0;
+		double hh = box.height / 2.0;
+
+		double dx = reference.x - cx;
+		double dy = reference.y - cy;
+
+		if(dx == 0 && dy == 0) {
+			// The only genuinely undefined input: reference IS the center,
+			// so there's no direction to project. Center is the correct
+			// fallback here, and only here.
+			return box.getCenter();
+		}
+
+		double scale;
+		if(dx == 0) {
+			scale = hh / Math.abs(dy);
+		}
+		else if(dy == 0) {
+			scale = hw / Math.abs(dx);
+		}
+		else {
+			scale = Math.min(hw / Math.abs(dx), hh / Math.abs(dy));
+		}
+
+		return new Point((int) Math.round(cx + dx * scale), (int) Math.round(cy + dy * scale));
 	}
 	
 	/**
